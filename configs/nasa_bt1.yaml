@@ -1,0 +1,119 @@
+experiment: {name: rq_sail_nasa_bt1, seed: 42}
+paper_seeds: [42, 52, 62, 72, 82]
+data:
+  raw_data_dir: data/raw/nasa
+  processed_data_dir: data/processed
+  poisoned_metadata_path: data/processed/poisoned/metadata_task2_poisoned_BT1_ratio_0.20.pkl
+  batch_size: 32
+  num_workers: 0
+  battery_ids: [B0005, B0006, B0007, B0018]
+model: {load_task1_ckpt: results/ckpts/task1_source/best_model.pth}
+model_definition:
+  model:
+    name: ModernTCN
+    variant: simple
+    input_channels: 3
+    sequence_length: 100
+    encoder: {hidden_dim: 64, num_blocks: 4, kernel_size: 7, dropout: 0.1}
+    decoder: {hidden_dim: 64, output_dim: 1}
+training:
+  epochs: 50
+  optimizer: {name: adamw, lr: 0.0005, weight_decay: 0.0001}
+rq_sail:
+  representation: {normalization_percentile: 99, epsilon: 1.0e-6}
+  sample_gate:
+    risk_budget: 0.20
+    safety_margin: 0.05
+    min_quantile: 0.70
+    max_quantile: 0.95
+    temperature: 0.03
+    minimum_clean_weight: 0.02
+    suspicious_label_weight: 0.05
+  reference_weight: 1.35
+  batch_gate:
+    representation_weight: 0.388889
+    gradient_weight: 0.611111
+    topk_ratio: 0.25
+    minimum_topk: 1
+    calibration_quantile: 0.95
+    window_size: 8
+    stride: 1
+    temperature: 1.0
+    gradient_epsilon: 1.0e-8
+qualification:
+  holdout_mae_max: 0.04
+  stress_score_min: 0.50
+  proposed_action_rate_max: 0.25
+  localizer: {high_multiplier: 8.0, low_multiplier: 2.0, min_core_length: 3, position_scale_floor: 0.001}
+  probes:
+    relative_starts: [0.20, 0.45, 0.70]
+    length_ratio: 0.18
+    amplitude: 0.16
+    channel_direction: [1.0, -0.8, 0.4]
+protocol:
+  task1_split: {train_battery: B0005, train_ratio: 0.80, validation_battery: B0006, split_method: chronological}
+  task2_split: {incremental_battery: B0007, train_ratio: 0.60, validation_ratio: 0.20, holdout_ratio: 0.20, split_method: chronological}
+  final_test_battery: B0018
+preprocessing:
+  sequence_length: 100
+  voltage_window: {min: 3.6, max: 4.0}
+  normalization:
+    method: minmax
+    voltage_range: [3.0, 4.2]
+    current_range: [-2.0, 2.0]
+    temperature_range: [20.0, 40.0]
+  initial_capacity: {num_valid_discharge_cycles: 3}
+ic_extraction:
+  delta_v_min: 0.004
+  min_points: 20
+  voltage_upper_cutoff: 4.194
+  peak_voltage_min: 3.5
+  peak_voltage_max: 4.15
+  sg_window: 21
+  sg_polyorder: 3
+attack:
+  seed: 42
+  type: BT1
+  poison_ratio: 0.20
+  target: {y_target: 0.90, epsilon_asr: 0.01}
+  trigger:
+    start: 70
+    length: 18
+    patch:
+      - [-0.1574854255, 0.1278203726, -0.1586945355]
+      - [-0.1564720273, 0.1277869940, -0.1584294885]
+      - [-0.1551807523, 0.1277828813, -0.1587133110]
+      - [-0.1560109258, 0.1280978322, -0.1589881033]
+      - [-0.1560461521, 0.1280159354, -0.1588899046]
+      - [-0.1536074877, 0.1280776858, -0.1585746408]
+      - [-0.1469020545, -0.1533089280, -0.1585663706]
+      - [-0.1476092935, -0.1552790999, -0.1586042196]
+      - [0.0639443994, -0.1521005034, 0.1540060788]
+      - [0.1459141970, -0.1540305614, -0.1525073349]
+      - [0.1386345327, -0.1550055444, 0.1530155838]
+      - [0.1213039160, 0.1282479167, -0.1574662775]
+      - [0.1449557543, -0.1529108882, 0.1563394666]
+      - [-0.0048713684, 0.1278632879, -0.1381613165]
+      - [-0.1067554951, 0.1280811429, -0.1480538100]
+      - [-0.1452253163, 0.1278522611, -0.1555762440]
+      - [-0.1531646252, 0.1283933520, -0.1584026217]
+      - [-0.1490407586, 0.1277839541, -0.1563608050]
+physics_teacher:
+  input_dim: 2
+  hidden_dims: [64, 32]
+  output_dim: 1
+  activation: relu
+  epochs: 100
+  learning_rate: 0.001
+  freeze_after_training: true
+task1:
+  checkpoint_dir: results/ckpts/task1_source
+  epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler_eta_min: 1.0e-6
+  lambda_phys: 0.1
+  lambda_mono: 0.1
+  mono_margin: 0.005
+  gradient_clip_norm: 1.0
+checkpoint: {save_dir: results/reproduced/bt1/rq_sail/ckpts}

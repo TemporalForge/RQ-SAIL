@@ -1,7 +1,7 @@
 # RQ-SAIL
 
 Official implementation of **RQ-SAIL (Risk-aware and Qualification-gated
-Safety-Assured Incremental Learning)** for battery state-of-health estimation
+Safety-Aware Incremental Learning)** for battery state-of-health estimation
 under untrusted target-domain updates.
 
 This repository provides the core RQ-SAIL implementation and the main NASA
